@@ -54,7 +54,7 @@ function App() {
       <div className="app">
         <nav className="navbar">
           <Link to="/" className="logo">
-            🥷 StealthPay
+            StealthPay
           </Link>
           <div className="nav-links">
             <Link to="/scan">Scan</Link>

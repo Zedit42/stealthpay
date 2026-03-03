@@ -1,24 +1,41 @@
 import { useState } from 'react';
 import type { WalletState } from '../App';
 import { useStealthKeys } from '../hooks/useStealthKeys';
-import { scanForPayments } from '../crypto/stealth';
+import {
+  scanForPayments,
+  computeStealthPrivateKey,
+  signWithdrawal,
+  signSplitWithdrawal,
+  generateNonce,
+} from '../crypto/stealth';
 import { RpcProvider } from 'starknet';
 
-const VAULT_ADDRESS = '0x02919fffe254c3a76a504363596ed033548bff0af4d6b82419a90a150635d15e';
-const PROVIDER = new RpcProvider({ nodeUrl: 'https://free-rpc.nethermind.io/sepolia-juno/v0_7' });
+const VAULT_ADDRESS = '0x07efc6272b3b1db522e63c114ef07d52cd1c0902d1102d3d0b5118c9a30c83d2';
+const PROVIDER = new RpcProvider({ nodeUrl: 'https://rpc.starknet-testnet.lava.build' });
+
+const TOKEN_NAMES: Record<string, string> = {
+  '0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7': 'ETH',
+  '0x04718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d': 'STRK',
+};
 
 interface DetectedPayment {
   index: number;
-  amount: string;
+  amount: bigint;
+  amountDisplay: string;
   token: string;
-  stealthPubX: string;
-  ephPubX: string;
+  tokenName: string;
+  stealthPubX: bigint;
+  stealthPubY: bigint;
+  ephPubX: bigint;
+  ephPubY: bigint;
 }
 
 interface Props {
   wallet: WalletState;
   connectWallet: () => Promise<void>;
 }
+
+type WithdrawMode = 'normal' | 'split';
 
 export default function Scan({ wallet, connectWallet }: Props) {
   const { keys, hasKeys } = useStealthKeys();
@@ -27,19 +44,28 @@ export default function Scan({ wallet, connectWallet }: Props) {
   const [scanned, setScanned] = useState(false);
   const [scanLog, setScanLog] = useState<string[]>([]);
 
+  // Withdraw state
+  const [withdrawing, setWithdrawing] = useState<number | null>(null);
+  const [withdrawMode, setWithdrawMode] = useState<WithdrawMode>('normal');
+  const [recipient, setRecipient] = useState('');
+  const [splitRecipients, setSplitRecipients] = useState([
+    { address: '', amount: '' },
+    { address: '', amount: '' },
+    { address: '', amount: '' },
+  ]);
+  const [withdrawStatus, setWithdrawStatus] = useState<string>('');
+  const [withdrawTxHash, setWithdrawTxHash] = useState<string>('');
+
+  const log = (msg: string) => setScanLog(prev => [...prev, msg]);
+
   const doScan = async () => {
     if (!hasKeys || !keys) return;
     setScanning(true);
     setPayments([]);
     setScanLog([]);
 
-    const log = (msg: string) => setScanLog(prev => [...prev, msg]);
-
     try {
       log('Connecting to Starknet Sepolia...');
-
-      // Fetch payment count from vault
-      log('Reading vault contract...');
       const countResult = await PROVIDER.callContract({
         contractAddress: VAULT_ADDRESS,
         entrypoint: 'get_payment_count',
@@ -54,8 +80,7 @@ export default function Scan({ wallet, connectWallet }: Props) {
         return;
       }
 
-      // Fetch each payment and try to match
-      log(`Scanning with viewing key...`);
+      log('Scanning with viewing key...');
       const viewingKey = BigInt(keys.viewingKey);
       const spendingPubX = BigInt(keys.spendingPubX);
       const spendingPubY = BigInt(keys.spendingPubY);
@@ -63,7 +88,7 @@ export default function Scan({ wallet, connectWallet }: Props) {
       const paymentData: Array<{
         ephPubX: bigint; ephPubY: bigint;
         stealthX: bigint; stealthY: bigint;
-        token: string; amount: string;
+        token: string; amount: bigint;
       }> = [];
 
       for (let i = 0; i < count; i++) {
@@ -72,29 +97,35 @@ export default function Scan({ wallet, connectWallet }: Props) {
           entrypoint: 'get_payment',
           calldata: [i.toString()],
         });
-        // Returns: (stealth_pub_x, stealth_pub_y, eph_pub_x, eph_pub_y, token, amount)
         paymentData.push({
-          ephPubX: BigInt(result[2]),
-          ephPubY: BigInt(result[3]),
           stealthX: BigInt(result[0]),
           stealthY: BigInt(result[1]),
+          ephPubX: BigInt(result[2]),
+          ephPubY: BigInt(result[3]),
           token: result[4],
-          amount: result[5],
+          amount: BigInt(result[5]),
         });
       }
 
-      // Try matching each payment
       const matched = scanForPayments(viewingKey, spendingPubX, spendingPubY, paymentData);
 
       if (matched.length > 0) {
         log(`✅ Found ${matched.length} payment(s) for you!`);
-        setPayments(matched.map(idx => ({
-          index: idx,
-          amount: (Number(BigInt(paymentData[idx].amount)) / 1e18).toFixed(6),
-          token: 'ETH',
-          stealthPubX: '0x' + paymentData[idx].stealthX.toString(16),
-          ephPubX: '0x' + paymentData[idx].ephPubX.toString(16),
-        })));
+        setPayments(matched.map(idx => {
+          const pd = paymentData[idx];
+          const tokenHex = '0x' + BigInt(pd.token).toString(16).padStart(64, '0');
+          return {
+            index: idx,
+            amount: pd.amount,
+            amountDisplay: (Number(pd.amount) / 1e18).toFixed(6),
+            token: pd.token,
+            tokenName: TOKEN_NAMES[tokenHex] || TOKEN_NAMES[pd.token] || 'TOKEN',
+            stealthPubX: pd.stealthX,
+            stealthPubY: pd.stealthY,
+            ephPubX: pd.ephPubX,
+            ephPubY: pd.ephPubY,
+          };
+        }));
       } else {
         log('No payments matched your viewing key');
       }
@@ -104,6 +135,107 @@ export default function Scan({ wallet, connectWallet }: Props) {
 
     setScanning(false);
     setScanned(true);
+  };
+
+  const doWithdraw = async (payment: DetectedPayment) => {
+    if (!keys) return;
+
+    if (!wallet.isConnected) {
+      await connectWallet();
+      return;
+    }
+
+    setWithdrawStatus('Signing withdrawal...');
+
+    try {
+      const stealthPrivKey = computeStealthPrivateKey(
+        BigInt(keys.spendingKey),
+        BigInt(keys.viewingKey),
+        payment.ephPubX,
+        payment.ephPubY,
+      );
+
+      const nonce = generateNonce();
+      const win = window as any;
+      const starknetWallet = win.starknet_argentX || win.starknet_braavos || win.starknet;
+      if (!starknetWallet?.account) throw new Error('Wallet not connected');
+
+      if (withdrawMode === 'normal') {
+        if (!recipient) { setWithdrawStatus('Enter recipient address'); return; }
+
+        const sig = signWithdrawal(
+          stealthPrivKey,
+          payment.stealthPubX, payment.stealthPubY,
+          payment.token, recipient,
+          payment.amount, nonce,
+        );
+
+        setWithdrawStatus('Confirm in wallet (relayer submitting)...');
+
+        const tx = await starknetWallet.account.execute([{
+          contractAddress: VAULT_ADDRESS,
+          entrypoint: 'withdraw',
+          calldata: [
+            '0x' + payment.stealthPubX.toString(16),
+            '0x' + payment.stealthPubY.toString(16),
+            payment.token,
+            recipient,
+            payment.amount.toString(), '0',
+            '0x' + nonce.toString(16),
+            sig.sigR, sig.sigS,
+          ],
+        }]);
+
+        setWithdrawTxHash(tx.transaction_hash);
+        setWithdrawStatus('✅ Withdrawn!');
+
+      } else {
+        // Split mode
+        const active = splitRecipients.filter(r => r.address && r.amount);
+        if (active.length === 0) { setWithdrawStatus('Add at least one recipient'); return; }
+
+        const recipients = active.map(r => ({
+          address: r.address,
+          amount: BigInt(Math.floor(parseFloat(r.amount) * 1e18)),
+        }));
+
+        // Pad to 3
+        while (recipients.length < 3) {
+          recipients.push({ address: '0x0', amount: 0n });
+        }
+
+        const sig = signSplitWithdrawal(
+          stealthPrivKey,
+          payment.stealthPubX, payment.stealthPubY,
+          payment.token,
+          recipients,
+          nonce,
+        );
+
+        setWithdrawStatus('Confirm in wallet (split withdraw)...');
+
+        const tx = await starknetWallet.account.execute([{
+          contractAddress: VAULT_ADDRESS,
+          entrypoint: 'withdraw_split',
+          calldata: [
+            '0x' + payment.stealthPubX.toString(16),
+            '0x' + payment.stealthPubY.toString(16),
+            payment.token,
+            recipients[0].address, recipients[0].amount.toString(), '0',
+            recipients[1].address, recipients[1].amount.toString(), '0',
+            recipients[2].address, recipients[2].amount.toString(), '0',
+            active.length.toString(),
+            '0x' + nonce.toString(16),
+            sig.sigR, sig.sigS,
+          ],
+        }]);
+
+        setWithdrawTxHash(tx.transaction_hash);
+        setWithdrawStatus('✅ Split withdrawn!');
+      }
+    } catch (err: any) {
+      setWithdrawStatus(`❌ ${err.message}`);
+    }
   };
 
   if (!hasKeys) {
@@ -122,10 +254,7 @@ export default function Scan({ wallet, connectWallet }: Props) {
     <div className="page">
       <div className="card">
         <h2>Scan for Payments</h2>
-        <p>
-          Scan the blockchain for payments sent to your stealth addresses.
-          Only your viewing key can detect these payments.
-        </p>
+        <p>Scan the blockchain for payments sent to your stealth addresses.</p>
 
         <div className="key-info">
           <span className="badge success">Viewing Key Active</span>
@@ -133,20 +262,12 @@ export default function Scan({ wallet, connectWallet }: Props) {
         </div>
 
         <button onClick={doScan} className="primary-btn" disabled={scanning}>
-          {scanning ? (
-            <>
-              <span className="spinner-inline" /> Scanning...
-            </>
-          ) : (
-            'Scan Blockchain'
-          )}
+          {scanning ? <><span className="spinner-inline" /> Scanning...</> : 'Scan Blockchain'}
         </button>
 
         {scanLog.length > 0 && (
           <div className="scan-log">
-            {scanLog.map((msg, i) => (
-              <div key={i} className="log-entry">{msg}</div>
-            ))}
+            {scanLog.map((msg, i) => <div key={i} className="log-entry">{msg}</div>)}
           </div>
         )}
 
@@ -156,21 +277,104 @@ export default function Scan({ wallet, connectWallet }: Props) {
             {payments.map((p) => (
               <div key={p.index} className="payment-card">
                 <div className="payment-info">
-                  <span className="amount">{p.amount} {p.token}</span>
-                  <code className="small">{p.stealthPubX.slice(0, 12)}...</code>
+                  <span className="amount">{p.amountDisplay} {p.tokenName}</span>
+                  <code className="small">stealth: {('0x' + p.stealthPubX.toString(16)).slice(0, 14)}...</code>
                 </div>
-                <button
-                  className="withdraw-btn"
-                  onClick={() => {
-                    if (!wallet.isConnected) {
-                      connectWallet();
-                      return;
-                    }
-                    alert('Withdrawal flow coming in next update!');
-                  }}
-                >
-                  Withdraw
-                </button>
+
+                {withdrawing === p.index ? (
+                  <div className="withdraw-form">
+                    <div className="mode-toggle">
+                      <button
+                        className={`mode-btn ${withdrawMode === 'normal' ? 'active' : ''}`}
+                        onClick={() => setWithdrawMode('normal')}
+                      >
+                        🔄 Normal
+                      </button>
+                      <button
+                        className={`mode-btn ${withdrawMode === 'split' ? 'active' : ''}`}
+                        onClick={() => setWithdrawMode('split')}
+                      >
+                        ✂️ Split (Privacy+)
+                      </button>
+                    </div>
+
+                    {withdrawMode === 'normal' ? (
+                      <div className="form-group">
+                        <label>Recipient Address</label>
+                        <input
+                          type="text"
+                          value={recipient}
+                          onChange={e => setRecipient(e.target.value)}
+                          placeholder="0x..."
+                        />
+                        <p className="note">💡 Anyone can submit this tx (relayer pattern). Your stealth key signs, the connected wallet just relays.</p>
+                      </div>
+                    ) : (
+                      <div className="split-form">
+                        <p className="note">✂️ Split to multiple addresses for extra privacy</p>
+                        {splitRecipients.map((sr, i) => (
+                          <div key={i} className="split-row">
+                            <input
+                              type="text"
+                              value={sr.address}
+                              onChange={e => {
+                                const updated = [...splitRecipients];
+                                updated[i] = { ...updated[i], address: e.target.value };
+                                setSplitRecipients(updated);
+                              }}
+                              placeholder={`Recipient ${i + 1} (0x...)`}
+                            />
+                            <input
+                              type="number"
+                              value={sr.amount}
+                              onChange={e => {
+                                const updated = [...splitRecipients];
+                                updated[i] = { ...updated[i], amount: e.target.value };
+                                setSplitRecipients(updated);
+                              }}
+                              placeholder="Amount"
+                              step="0.0001"
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {withdrawStatus && (
+                      <div className={`status-msg ${withdrawStatus.startsWith('✅') ? 'success' : withdrawStatus.startsWith('❌') ? 'error' : ''}`}>
+                        {withdrawStatus}
+                      </div>
+                    )}
+
+                    {withdrawTxHash && (
+                      <a
+                        href={`https://sepolia.voyager.online/tx/${withdrawTxHash}`}
+                        target="_blank" rel="noopener"
+                        className="tx-link"
+                      >
+                        View TX ↗
+                      </a>
+                    )}
+
+                    <div className="withdraw-actions">
+                      <button className="primary-btn" onClick={() => doWithdraw(p)}>
+                        {wallet.isConnected ? 'Sign & Withdraw' : 'Connect Wallet'}
+                      </button>
+                      <button className="secondary-btn" onClick={() => { setWithdrawing(null); setWithdrawStatus(''); setWithdrawTxHash(''); }}>
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <button className="withdraw-btn" onClick={() => {
+                    setWithdrawing(p.index);
+                    setWithdrawStatus('');
+                    setWithdrawTxHash('');
+                    setRecipient(wallet.address || '');
+                  }}>
+                    Withdraw
+                  </button>
+                )}
               </div>
             ))}
           </div>
@@ -185,19 +389,19 @@ export default function Scan({ wallet, connectWallet }: Props) {
       </div>
 
       <div className="card">
-        <h2>How Scanning Works</h2>
+        <h2>Privacy Features</h2>
         <div className="info-grid">
           <div className="info-item">
-            <strong>Privacy Preserved</strong>
-            <p>Scanning happens client-side. Your viewing key never leaves your browser.</p>
+            <strong>🔄 Relayer Pattern</strong>
+            <p>Anyone can submit the withdrawal tx. Your stealth key signs off-chain — the relayer just pays gas.</p>
           </div>
           <div className="info-item">
-            <strong>On-chain Events</strong>
-            <p>We read StealthPayment records from the vault contract and try each with your viewing key.</p>
+            <strong>✂️ Split Withdrawal</strong>
+            <p>Split funds to up to 3 different addresses. Makes on-chain analysis much harder.</p>
           </div>
           <div className="info-item">
-            <strong>Withdraw Anywhere</strong>
-            <p>Found a payment? Withdraw to any wallet. The link between sender and receiver stays hidden.</p>
+            <strong>🔒 Client-side Scanning</strong>
+            <p>Your viewing key never leaves the browser. All matching happens locally.</p>
           </div>
         </div>
       </div>

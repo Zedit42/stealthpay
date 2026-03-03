@@ -159,3 +159,48 @@ export function signWithdrawal(
     sigS: toHex(sig.s),
   };
 }
+
+/**
+ * Sign a split withdrawal (up to 3 recipients)
+ */
+export function signSplitWithdrawal(
+  stealthPrivKey: bigint,
+  stealthPubX: bigint, stealthPubY: bigint,
+  token: string,
+  recipients: { address: string; amount: bigint }[],
+  nonce: bigint,
+) {
+  const numRecipients = recipients.length;
+  const r1 = recipients[0]?.address || '0x0';
+  const a1 = recipients[0]?.amount || 0n;
+  const r2 = recipients[1]?.address || '0x0';
+  const a2 = recipients[1]?.amount || 0n;
+  const r3 = recipients[2]?.address || '0x0';
+  const a3 = recipients[2]?.amount || 0n;
+
+  const msgHash = BigInt(hash.computePoseidonHashOnElements([
+    toHex(stealthPubX), toHex(stealthPubY),
+    token,
+    r1, toHex(a1 & ((1n << 128n) - 1n)), toHex(a1 >> 128n),
+    r2, toHex(a2 & ((1n << 128n) - 1n)), toHex(a2 >> 128n),
+    r3, toHex(a3 & ((1n << 128n) - 1n)), toHex(a3 >> 128n),
+    toHex(BigInt(numRecipients)),
+    toHex(nonce),
+  ]));
+
+  const sig = starkCurve.sign(toHex(msgHash), toHex(stealthPrivKey));
+
+  return {
+    msgHash: toHex(msgHash),
+    sigR: toHex(sig.r),
+    sigS: toHex(sig.s),
+  };
+}
+
+export function generateNonce(): bigint {
+  const bytes = new Uint8Array(16);
+  crypto.getRandomValues(bytes);
+  let nonce = 0n;
+  for (const b of bytes) nonce = (nonce << 8n) | BigInt(b);
+  return nonce;
+}

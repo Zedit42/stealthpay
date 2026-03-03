@@ -4,7 +4,12 @@ import type { WalletState } from '../App';
 import { deriveStealthAddress } from '../crypto/stealth';
 // starknet imports available for contract interaction
 
-const VAULT_ADDRESS = '0x02919fffe254c3a76a504363596ed033548bff0af4d6b82419a90a150635d15e';
+const VAULT_ADDRESS = '0x07efc6272b3b1db522e63c114ef07d52cd1c0902d1102d3d0b5118c9a30c83d2';
+
+const TOKEN_ADDRESSES: Record<string, string> = {
+  ETH: '0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7',
+  STRK: '0x04718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d',
+};
 
 interface Props {
   wallet: WalletState;
@@ -68,15 +73,13 @@ export default function Pay({ wallet, connectWallet }: Props) {
         throw new Error('Wallet not connected');
       }
 
-      // ETH contract on Sepolia
-      const ETH_ADDRESS = '0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7';
-
+      const tokenAddress = TOKEN_ADDRESSES[token] || TOKEN_ADDRESSES.ETH;
       const amountWei = BigInt(Math.floor(parseFloat(amount) * 1e18));
 
       // Multicall: approve vault + send_to_stealth
       const txResult = await starknetWallet.account.execute([
         {
-          contractAddress: ETH_ADDRESS,
+          contractAddress: tokenAddress,
           entrypoint: 'approve',
           calldata: [VAULT_ADDRESS, amountWei.toString(), '0'],
         },
@@ -84,13 +87,13 @@ export default function Pay({ wallet, connectWallet }: Props) {
           contractAddress: VAULT_ADDRESS,
           entrypoint: 'send_to_stealth',
           calldata: [
-            result.stealthPubX,   // stealth_pub_x
-            result.stealthPubY,   // stealth_pub_y
-            result.ephemeralPubX, // ephemeral_pub_x
-            result.ephemeralPubY, // ephemeral_pub_y
-            ETH_ADDRESS,          // token
-            amountWei.toString(), // amount low
-            '0',                  // amount high (u256)
+            result.stealthPubX,
+            result.stealthPubY,
+            result.ephemeralPubX,
+            result.ephemeralPubY,
+            tokenAddress,
+            amountWei.toString(),
+            '0',
           ],
         },
       ]);

@@ -4,14 +4,16 @@
   "contracts": {
     "Registry": {
       "classHash": "0x16475a2637cad70744443ff7cd6ecee4aab1de98d6227e22e1c2ca3a65b9a0c",
-      "address": "0x03dbbf448900141c36d85ff6b94e9891616e57f19e82d37cd7def23b1cf21deb",
-      "explorer": "https://sepolia.voyager.online/contract/0x03dbbf448900141c36d85ff6b94e9891616e57f19e82d37cd7def23b1cf21deb"
+      "address": "0x03dbbf448900141c36d85ff6b94e9891616e57f19e82d37cd7def23b1cf21deb"
     },
     "StealthVault": {
-      "classHash": "0x24aefdb5363434df24e2de50c84a13cdae057853006e7021f07d83cb436cb74",
+      "classHash": "0x4f89619098f25e4c5033865f5e975a923b699655ecd6c634aab57124038cc3e",
+      "address": "0x07efc6272b3b1db522e63c114ef07d52cd1c0902d1102d3d0b5118c9a30c83d2",
+      "note": "V2 — split withdrawal, scheduled withdrawal, relayer support"
+    },
+    "StealthVault_v1": {
       "address": "0x02919fffe254c3a76a504363596ed033548bff0af4d6b82419a90a150635d15e",
-      "explorer": "https://sepolia.voyager.online/contract/0x02919fffe254c3a76a504363596ed033548bff0af4d6b82419a90a150635d15e",
-      "note": "Unified vault with send + withdraw + ECDSA sig verification"
+      "note": "Old V1 vault"
     }
   }
 }

@@ -502,6 +502,24 @@ code { font-family: var(--mono); }
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 
+/* ═══ Withdraw Form ═══ */
+.withdraw-form { margin-top: 16px; padding: 16px; background: rgba(255,255,255,0.03); border-radius: 12px; border: 1px solid var(--border); }
+.mode-toggle { display: flex; gap: 8px; margin-bottom: 16px; }
+.mode-btn { flex: 1; padding: 10px; border-radius: 8px; border: 1px solid var(--border); background: transparent; color: var(--text-secondary); cursor: pointer; font-size: 14px; transition: all 0.2s; }
+.mode-btn.active { background: var(--primary); color: white; border-color: var(--primary); }
+.mode-btn:hover:not(.active) { border-color: var(--primary); color: var(--text-primary); }
+.split-form { display: flex; flex-direction: column; gap: 8px; }
+.split-row { display: flex; gap: 8px; }
+.split-row input:first-child { flex: 2; }
+.split-row input:last-child { flex: 1; }
+.withdraw-actions { display: flex; gap: 8px; margin-top: 12px; }
+.withdraw-actions .primary-btn, .withdraw-actions .secondary-btn { flex: 1; }
+.status-msg { padding: 10px; border-radius: 8px; font-size: 14px; margin: 8px 0; background: rgba(255,255,255,0.05); }
+.status-msg.success { background: rgba(0,200,83,0.1); color: #00c853; }
+.status-msg.error { background: rgba(255,82,82,0.1); color: #ff5252; }
+.tx-link { display: inline-block; margin: 8px 0; color: var(--primary); text-decoration: none; }
+.tx-link:hover { text-decoration: underline; }
+
 /* ═══ Responsive ═══ */
 @media (max-width: 640px) {
   .features { grid-template-columns: 1fr; }
