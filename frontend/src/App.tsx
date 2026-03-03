@@ -1,6 +1,6 @@
 import { BrowserRouter, Routes, Route, Link } from 'react-router-dom';
 import { useState } from 'react';
-import { connect } from 'get-starknet-core';
+// Wallet connection handled inline
 import Home from './pages/Home';
 import Pay from './pages/Pay';
 import Scan from './pages/Scan';
@@ -20,7 +20,11 @@ function App() {
 
   const connectWallet = async () => {
     try {
-      const starknet = await connect({ modalMode: 'alwaysAsk' });
+      // Dynamic import to avoid build issues
+      const mod = await import('get-starknet-core') as any;
+      const connectFn = mod.connect || mod.default?.connect || mod.default;
+      if (!connectFn) { alert('Wallet connector not available'); return; }
+      const starknet = await connectFn({ modalMode: 'alwaysAsk' });
       if (starknet) {
         await starknet.enable();
         if (starknet.selectedAddress) {
