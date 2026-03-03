@@ -118,7 +118,7 @@ export default function Pay({ wallet, connectWallet }: Props) {
   return (
     <div className="page">
       <div className="card">
-        <h2>🥷 Send Private Payment</h2>
+        <h2>Send Private Payment</h2>
         <p className="subtitle">The recipient's real address will never appear on-chain.</p>
 
         <div className="recipient-info">
@@ -152,7 +152,7 @@ export default function Pay({ wallet, connectWallet }: Props) {
             className="primary-btn"
             disabled={!amount || parseFloat(amount) <= 0}
           >
-            {wallet.isConnected ? '🔒 Send Privately' : '🔗 Connect Wallet & Send'}
+            {wallet.isConnected ? 'Send Privately' : 'Connect Wallet & Send'}
           </button>
         )}
 

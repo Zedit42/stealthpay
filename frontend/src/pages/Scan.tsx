@@ -36,10 +36,10 @@ export default function Scan({ wallet, connectWallet }: Props) {
     const log = (msg: string) => setScanLog(prev => [...prev, msg]);
 
     try {
-      log('📡 Connecting to Starknet Sepolia...');
+      log('Connecting to Starknet Sepolia...');
 
       // Fetch payment count from vault
-      log('🔍 Reading vault contract...');
+      log('Reading vault contract...');
       const countResult = await PROVIDER.callContract({
         contractAddress: VAULT_ADDRESS,
         entrypoint: 'get_payment_count',
@@ -48,14 +48,14 @@ export default function Scan({ wallet, connectWallet }: Props) {
       log(`📊 Found ${count} total payments on-chain`);
 
       if (count === 0) {
-        log('📭 No payments to scan');
+        log('No payments to scan');
         setScanning(false);
         setScanned(true);
         return;
       }
 
       // Fetch each payment and try to match
-      log(`🔑 Scanning with viewing key...`);
+      log(`Scanning with viewing key...`);
       const viewingKey = BigInt(keys.viewingKey);
       const spendingPubX = BigInt(keys.spendingPubX);
       const spendingPubY = BigInt(keys.spendingPubY);
@@ -96,7 +96,7 @@ export default function Scan({ wallet, connectWallet }: Props) {
           ephPubX: '0x' + paymentData[idx].ephPubX.toString(16),
         })));
       } else {
-        log('📭 No payments matched your viewing key');
+        log('No payments matched your viewing key');
       }
     } catch (err: any) {
       log(`❌ Error: ${err.message}`);
@@ -110,7 +110,7 @@ export default function Scan({ wallet, connectWallet }: Props) {
     return (
       <div className="page">
         <div className="card">
-          <h2>🔍 Scan for Payments</h2>
+          <h2>Scan for Payments</h2>
           <p>You need to generate stealth keys first.</p>
           <a href="/" className="primary-btn inline-link">Go to Home</a>
         </div>
@@ -121,14 +121,14 @@ export default function Scan({ wallet, connectWallet }: Props) {
   return (
     <div className="page">
       <div className="card">
-        <h2>🔍 Scan for Payments</h2>
+        <h2>Scan for Payments</h2>
         <p>
           Scan the blockchain for payments sent to your stealth addresses.
           Only your viewing key can detect these payments.
         </p>
 
         <div className="key-info">
-          <span className="badge success">🔑 Viewing Key Active</span>
+          <span className="badge success">Viewing Key Active</span>
           <code className="small">{keys!.viewingPubX.slice(0, 16)}...</code>
         </div>
 
@@ -138,7 +138,7 @@ export default function Scan({ wallet, connectWallet }: Props) {
               <span className="spinner-inline" /> Scanning...
             </>
           ) : (
-            '🔍 Scan Blockchain'
+            'Scan Blockchain'
           )}
         </button>
 
@@ -169,7 +169,7 @@ export default function Scan({ wallet, connectWallet }: Props) {
                     alert('Withdrawal flow coming in next update!');
                   }}
                 >
-                  💸 Withdraw
+                  Withdraw
                 </button>
               </div>
             ))}
@@ -178,7 +178,7 @@ export default function Scan({ wallet, connectWallet }: Props) {
 
         {scanned && payments.length === 0 && !scanning && (
           <div className="empty-state">
-            <p>📭 No payments found</p>
+            <p>No payments found</p>
             <p className="note">Share your payment link to receive private payments!</p>
           </div>
         )}
@@ -188,15 +188,15 @@ export default function Scan({ wallet, connectWallet }: Props) {
         <h2>How Scanning Works</h2>
         <div className="info-grid">
           <div className="info-item">
-            <strong>🔒 Privacy Preserved</strong>
+            <strong>Privacy Preserved</strong>
             <p>Scanning happens client-side. Your viewing key never leaves your browser.</p>
           </div>
           <div className="info-item">
-            <strong>🔗 On-chain Events</strong>
+            <strong>On-chain Events</strong>
             <p>We read StealthPayment records from the vault contract and try each with your viewing key.</p>
           </div>
           <div className="info-item">
-            <strong>💸 Withdraw Anywhere</strong>
+            <strong>Withdraw Anywhere</strong>
             <p>Found a payment? Withdraw to any wallet. The link between sender and receiver stays hidden.</p>
           </div>
         </div>

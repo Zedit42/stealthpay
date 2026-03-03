@@ -25,7 +25,7 @@ export default function Dashboard({ wallet, connectWallet }: Props) {
           <h2>Dashboard</h2>
           <p>Generate stealth keys to get started.</p>
           <button onClick={generate} className="primary-btn">
-            🔑 Generate Keys
+            Generate Keys
           </button>
         </div>
       </div>
@@ -40,13 +40,13 @@ export default function Dashboard({ wallet, connectWallet }: Props) {
   return (
     <div className="page">
       <div className="card">
-        <h2>🥷 Your Dashboard</h2>
+        <h2>Your Dashboard</h2>
 
         {!wallet.isConnected && (
           <div className="connect-prompt">
             <p>Connect your wallet to interact with the blockchain.</p>
             <button onClick={connectWallet} className="secondary-btn">
-              🔗 Connect Wallet
+              Connect Wallet
             </button>
           </div>
         )}
@@ -68,7 +68,7 @@ export default function Dashboard({ wallet, connectWallet }: Props) {
       </div>
 
       <div className="card">
-        <h2>📎 Your Payment Link</h2>
+        <h2>Your Payment Link</h2>
         <p className="note">Share this link to receive private payments.</p>
         <div className="link-box">
           <code>{paymentLink.length > 80 ? paymentLink.slice(0, 80) + '...' : paymentLink}</code>
@@ -83,7 +83,7 @@ export default function Dashboard({ wallet, connectWallet }: Props) {
 
       <div className="card">
         <div className="card-header">
-          <h2>🔐 Key Management</h2>
+          <h2>Key Management</h2>
           <button
             onClick={() => setShowKeys(!showKeys)}
             className="toggle-btn"

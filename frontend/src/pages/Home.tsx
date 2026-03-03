@@ -31,11 +31,8 @@ export default function Home({ wallet: _wallet, connectWallet: _cw }: Props) {
   return (
     <div className="page">
       <div className="hero">
-        <h1>🥷 Private Payments on Starknet</h1>
-        <p>Receive payments without revealing your wallet address.</p>
-        <p className="subtitle">
-          Powered by stealth addresses & STARK proofs.
-        </p>
+        <h1>Private Payments<br />on Starknet</h1>
+        <p>Receive payments without revealing your wallet address. Powered by stealth addresses and STARK proofs.</p>
       </div>
 
       <div className="card">
@@ -44,7 +41,7 @@ export default function Home({ wallet: _wallet, connectWallet: _cw }: Props) {
           <>
             <p>Generate your stealth keys to create a payment link. Your keys are stored locally — never sent to any server.</p>
             <button onClick={handleSetup} className="primary-btn">
-              🔑 Generate Stealth Keys
+              Generate Stealth Keys
             </button>
           </>
         ) : (
@@ -60,7 +57,7 @@ export default function Home({ wallet: _wallet, connectWallet: _cw }: Props) {
             </div>
             {!paymentLink && (
               <button onClick={handleSetup} className="primary-btn">
-                🔗 Generate Payment Link
+                Generate Payment Link
               </button>
             )}
           </>
@@ -70,7 +67,7 @@ export default function Home({ wallet: _wallet, connectWallet: _cw }: Props) {
           <div className="link-box">
             <code>{paymentLink}</code>
             <button onClick={copyLink} className="copy-btn">
-              {copied ? '✅ Copied!' : '📋 Copy'}
+              {copied ? '✅ Copied!' : 'Copy'}
             </button>
           </div>
         )}
@@ -105,19 +102,16 @@ export default function Home({ wallet: _wallet, connectWallet: _cw }: Props) {
 
       <div className="features">
         <div className="feature">
-          <span className="icon">🔒</span>
           <h3>Private</h3>
-          <p>One-time stealth addresses per payment</p>
+          <p>One-time stealth addresses. Each payment goes to a unique address.</p>
         </div>
         <div className="feature">
-          <span className="icon">⚡</span>
           <h3>Fast</h3>
-          <p>Instant on Starknet L2</p>
+          <p>Instant settlement on Starknet L2 with near-zero fees.</p>
         </div>
         <div className="feature">
-          <span className="icon">🔗</span>
           <h3>Shareable</h3>
-          <p>Payment links like PayPal.me</p>
+          <p>Payment links anyone can use. No wallet address exposed.</p>
         </div>
       </div>
     </div>
