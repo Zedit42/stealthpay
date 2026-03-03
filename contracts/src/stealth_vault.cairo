@@ -11,28 +11,29 @@ pub trait IStealthVault<TContractState> {
         amount: u256,
     );
     fn get_payment_count(self: @TContractState) -> u64;
-    fn get_ephemeral_key(self: @TContractState, index: u64) -> (felt252, felt252);
+    fn get_payment(self: @TContractState, index: u64) -> (felt252, felt252, ContractAddress, ContractAddress, u256);
+}
+
+#[starknet::interface]
+pub trait IERC20<TContractState> {
+    fn transfer_from(
+        ref self: TContractState,
+        sender: ContractAddress,
+        recipient: ContractAddress,
+        amount: u256,
+    ) -> bool;
+    fn transfer(ref self: TContractState, recipient: ContractAddress, amount: u256) -> bool;
+    fn balance_of(self: @TContractState, account: ContractAddress) -> u256;
 }
 
 #[starknet::contract]
-mod StealthVault {
-    use starknet::{ContractAddress, get_caller_address, get_contract_address};
+pub mod StealthVault {
+    use starknet::{ContractAddress, get_caller_address};
     use starknet::storage::{Map, StorageMapReadAccess, StorageMapWriteAccess, StoragePointerReadAccess, StoragePointerWriteAccess};
-
-    // ERC20 interface for token transfers
-    #[starknet::interface]
-    trait IERC20<TContractState> {
-        fn transfer_from(
-            ref self: TContractState,
-            sender: ContractAddress,
-            recipient: ContractAddress,
-            amount: u256,
-        ) -> bool;
-    }
+    use super::{IERC20Dispatcher, IERC20DispatcherTrait};
 
     #[storage]
     struct Storage {
-        // Ephemeral keys log (for receiver scanning)
         ephemeral_pub_x: Map<u64, felt252>,
         ephemeral_pub_y: Map<u64, felt252>,
         ephemeral_stealth_addr: Map<u64, ContractAddress>,
@@ -43,19 +44,19 @@ mod StealthVault {
 
     #[event]
     #[derive(Drop, starknet::Event)]
-    enum Event {
+    pub enum Event {
         StealthPayment: StealthPayment,
     }
 
     #[derive(Drop, starknet::Event)]
-    struct StealthPayment {
+    pub struct StealthPayment {
         #[key]
-        stealth_address: ContractAddress,
-        ephemeral_pub_x: felt252,
-        ephemeral_pub_y: felt252,
-        token: ContractAddress,
-        amount: u256,
-        index: u64,
+        pub stealth_address: ContractAddress,
+        pub ephemeral_pub_x: felt252,
+        pub ephemeral_pub_y: felt252,
+        pub token: ContractAddress,
+        pub amount: u256,
+        pub index: u64,
     }
 
     #[abi(embed_v0)]
@@ -69,8 +70,9 @@ mod StealthVault {
             amount: u256,
         ) {
             assert!(amount > 0, "Amount must be > 0");
+            assert!(ephemeral_pub_x != 0, "Invalid ephemeral key");
 
-            // Transfer tokens from sender to stealth address
+            // Transfer tokens from sender to stealth address directly
             let caller = get_caller_address();
             let token_dispatcher = IERC20Dispatcher { contract_address: token };
             token_dispatcher.transfer_from(caller, stealth_address, amount);
@@ -98,8 +100,15 @@ mod StealthVault {
             self.payment_count.read()
         }
 
-        fn get_ephemeral_key(self: @ContractState, index: u64) -> (felt252, felt252) {
-            (self.ephemeral_pub_x.read(index), self.ephemeral_pub_y.read(index))
+        fn get_payment(self: @ContractState, index: u64) -> (felt252, felt252, ContractAddress, ContractAddress, u256) {
+            assert!(index < self.payment_count.read(), "Index out of bounds");
+            (
+                self.ephemeral_pub_x.read(index),
+                self.ephemeral_pub_y.read(index),
+                self.ephemeral_stealth_addr.read(index),
+                self.ephemeral_token.read(index),
+                self.ephemeral_amount.read(index),
+            )
         }
     }
 }

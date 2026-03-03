@@ -16,13 +16,12 @@ pub trait IRegistry<TContractState> {
 }
 
 #[starknet::contract]
-mod Registry {
+pub mod Registry {
     use starknet::{ContractAddress, get_caller_address};
-    use starknet::storage::{Map, StorageMapReadAccess, StorageMapWriteAccess, StoragePointerReadAccess, StoragePointerWriteAccess};
+    use starknet::storage::{Map, StorageMapReadAccess, StorageMapWriteAccess};
 
     #[storage]
     struct Storage {
-        // user -> (spending_pub_x, spending_pub_y, viewing_pub_x, viewing_pub_y)
         spending_pub_x: Map<ContractAddress, felt252>,
         spending_pub_y: Map<ContractAddress, felt252>,
         viewing_pub_x: Map<ContractAddress, felt252>,
@@ -32,18 +31,18 @@ mod Registry {
 
     #[event]
     #[derive(Drop, starknet::Event)]
-    enum Event {
+    pub enum Event {
         MetaAddressRegistered: MetaAddressRegistered,
     }
 
     #[derive(Drop, starknet::Event)]
-    struct MetaAddressRegistered {
+    pub struct MetaAddressRegistered {
         #[key]
-        user: ContractAddress,
-        spending_pub_x: felt252,
-        spending_pub_y: felt252,
-        viewing_pub_x: felt252,
-        viewing_pub_y: felt252,
+        pub user: ContractAddress,
+        pub spending_pub_x: felt252,
+        pub spending_pub_y: felt252,
+        pub viewing_pub_x: felt252,
+        pub viewing_pub_y: felt252,
     }
 
     #[abi(embed_v0)]
@@ -55,6 +54,10 @@ mod Registry {
             viewing_pub_x: felt252,
             viewing_pub_y: felt252,
         ) {
+            // Validate non-zero keys
+            assert!(spending_pub_x != 0, "Invalid spending key x");
+            assert!(viewing_pub_x != 0, "Invalid viewing key x");
+
             let caller = get_caller_address();
             self.spending_pub_x.write(caller, spending_pub_x);
             self.spending_pub_y.write(caller, spending_pub_y);
