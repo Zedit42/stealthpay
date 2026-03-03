@@ -18,7 +18,8 @@ export default function Home(_props: Props) {
       newKeys.spendingPubX, newKeys.spendingPubY,
       newKeys.viewingPubX, newKeys.viewingPubY,
     ].join(',');
-    const encoded = btoa(metaAddr);
+    // URL-safe base64: replace +/= chars that break routing
+    const encoded = btoa(metaAddr).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
     setPaymentLink(`${window.location.origin}/pay/${encoded}`);
   };
 

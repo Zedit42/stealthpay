@@ -21,7 +21,10 @@ export default function Pay(_props: Props) {
   const metaKeys = useMemo(() => {
     if (!metaAddress) return null;
     try {
-      const decoded = atob(metaAddress);
+      // Reverse URL-safe base64
+      let b64 = metaAddress.replace(/-/g, '+').replace(/_/g, '/');
+      while (b64.length % 4) b64 += '=';
+      const decoded = atob(b64);
       const [spx, spy, vpx, vpy] = decoded.split(',');
       return { spendingPubX: spx, spendingPubY: spy, viewingPubX: vpx, viewingPubY: vpy };
     } catch {

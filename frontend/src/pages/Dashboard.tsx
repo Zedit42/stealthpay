@@ -33,7 +33,7 @@ export default function Dashboard(_props: Props) {
 
   const paymentLink = (() => {
     const meta = [keys!.spendingPubX, keys!.spendingPubY, keys!.viewingPubX, keys!.viewingPubY].join(',');
-    return `${window.location.origin}/pay/${btoa(meta)}`;
+    return `${window.location.origin}/pay/${btoa(meta).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '')}`;
   })();
 
   return (
