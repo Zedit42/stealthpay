@@ -4,7 +4,7 @@ import type { WalletState } from '../App';
 import { deriveStealthAddress } from '../crypto/stealth';
 // starknet imports available for contract interaction
 
-const VAULT_ADDRESS = '0x023edf64d980a0030f0649a6610209f3633c5b2006f15b7f82236a0a944ad3b0';
+const VAULT_ADDRESS = '0x02919fffe254c3a76a504363596ed033548bff0af4d6b82419a90a150635d15e';
 
 interface Props {
   wallet: WalletState;
@@ -73,7 +73,7 @@ export default function Pay({ wallet, connectWallet }: Props) {
 
       const amountWei = BigInt(Math.floor(parseFloat(amount) * 1e18));
 
-      // Multicall: approve + send_to_stealth
+      // Multicall: approve vault + send_to_stealth
       const txResult = await starknetWallet.account.execute([
         {
           contractAddress: ETH_ADDRESS,
@@ -84,12 +84,13 @@ export default function Pay({ wallet, connectWallet }: Props) {
           contractAddress: VAULT_ADDRESS,
           entrypoint: 'send_to_stealth',
           calldata: [
-            result.stealthPubX, // stealth_address (using pubkey as address for demo)
-            result.ephemeralPubX,
-            result.ephemeralPubY,
-            ETH_ADDRESS,
-            amountWei.toString(),
-            '0', // u256 high
+            result.stealthPubX,   // stealth_pub_x
+            result.stealthPubY,   // stealth_pub_y
+            result.ephemeralPubX, // ephemeral_pub_x
+            result.ephemeralPubY, // ephemeral_pub_y
+            ETH_ADDRESS,          // token
+            amountWei.toString(), // amount low
+            '0',                  // amount high (u256)
           ],
         },
       ]);

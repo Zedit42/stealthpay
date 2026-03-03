@@ -4,7 +4,7 @@ import { useStealthKeys } from '../hooks/useStealthKeys';
 import { scanForPayments } from '../crypto/stealth';
 import { RpcProvider } from 'starknet';
 
-const VAULT_ADDRESS = '0x023edf64d980a0030f0649a6610209f3633c5b2006f15b7f82236a0a944ad3b0';
+const VAULT_ADDRESS = '0x02919fffe254c3a76a504363596ed033548bff0af4d6b82419a90a150635d15e';
 const PROVIDER = new RpcProvider({ nodeUrl: 'https://free-rpc.nethermind.io/sepolia-juno/v0_7' });
 
 interface DetectedPayment {
@@ -72,13 +72,14 @@ export default function Scan({ wallet, connectWallet }: Props) {
           entrypoint: 'get_payment',
           calldata: [i.toString()],
         });
+        // Returns: (stealth_pub_x, stealth_pub_y, eph_pub_x, eph_pub_y, token, amount)
         paymentData.push({
-          ephPubX: BigInt(result[0]),
-          ephPubY: BigInt(result[1]),
-          stealthX: BigInt(result[2]), // stealth address
-          stealthY: 0n, // we store address not pubkey Y
-          token: result[3],
-          amount: result[4],
+          ephPubX: BigInt(result[2]),
+          ephPubY: BigInt(result[3]),
+          stealthX: BigInt(result[0]),
+          stealthY: BigInt(result[1]),
+          token: result[4],
+          amount: result[5],
         });
       }
 
