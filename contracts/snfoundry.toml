@@ -1,0 +1,5 @@
+
+[sncast.stealthpay]
+account = "stealthpay"
+accounts-file = "/Users/yigitberhangulabigul/.starknet_accounts/starknet_open_zeppelin_accounts.json"
+network = "sepolia"

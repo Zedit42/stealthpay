@@ -1,0 +1,21 @@
+{
+  "network": "starknet-sepolia",
+  "deployer": "0x044e59e0dd3cec8fb232e3060ffceffbe383d474955c6499b57376e55d289ff5",
+  "contracts": {
+    "Registry": {
+      "classHash": "0x16475a2637cad70744443ff7cd6ecee4aab1de98d6227e22e1c2ca3a65b9a0c",
+      "address": "0x03dbbf448900141c36d85ff6b94e9891616e57f19e82d37cd7def23b1cf21deb",
+      "explorer": "https://sepolia.voyager.online/contract/0x03dbbf448900141c36d85ff6b94e9891616e57f19e82d37cd7def23b1cf21deb"
+    },
+    "StealthVault": {
+      "classHash": "0x3aecb1494f9f1227edd12d7a7938907ae25aa3ea21c7d64b6e4e7d5c3f1eff",
+      "address": "0x023edf64d980a0030f0649a6610209f3633c5b2006f15b7f82236a0a944ad3b0",
+      "explorer": "https://sepolia.voyager.online/contract/0x023edf64d980a0030f0649a6610209f3633c5b2006f15b7f82236a0a944ad3b0"
+    },
+    "Withdrawal": {
+      "classHash": "0x3f6e22affbbc3a55fbc9f280778ea9c0aa11214c6f6b494574232d5668220a4",
+      "address": "0x05a4165f6550337319eef718ac73d0771bfb549da11d2f51dc90c107c6f28830",
+      "explorer": "https://sepolia.voyager.online/contract/0x05a4165f6550337319eef718ac73d0771bfb549da11d2f51dc90c107c6f28830"
+    }
+  }
+}
