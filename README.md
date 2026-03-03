@@ -6,7 +6,7 @@
     Powered by stealth addresses and STARK cryptography.
   </p>
   <p align="center">
-    <a href="https://frontend-sigma-olive-45.vercel.app"><strong>🔗 Live Demo</strong></a> ·
+    <a href="https://stealthpay-app.vercel.app"><strong>🔗 Live Demo</strong></a> ·
     <a href="https://sepolia.voyager.online/contract/0x07efc6272b3b1db522e63c114ef07d52cd1c0902d1102d3d0b5118c9a30c83d2"><strong>📜 Contract on Voyager</strong></a>
   </p>
   <p align="center">
