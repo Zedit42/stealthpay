@@ -1,6 +1,11 @@
 import { useState } from 'react';
 import type { WalletState } from '../App';
 import { useStealthKeys } from '../hooks/useStealthKeys';
+import { scanForPayments } from '../crypto/stealth';
+import { RpcProvider } from 'starknet';
+
+const VAULT_ADDRESS = '0x023edf64d980a0030f0649a6610209f3633c5b2006f15b7f82236a0a944ad3b0';
+const PROVIDER = new RpcProvider({ nodeUrl: 'https://free-rpc.nethermind.io/sepolia-juno/v0_7' });
 
 interface DetectedPayment {
   index: number;
@@ -12,28 +17,90 @@ interface DetectedPayment {
 
 interface Props {
   wallet: WalletState;
+  connectWallet: () => Promise<void>;
 }
 
-export default function Scan(_props: Props) {
+export default function Scan({ wallet, connectWallet }: Props) {
   const { keys, hasKeys } = useStealthKeys();
   const [scanning, setScanning] = useState(false);
   const [payments, setPayments] = useState<DetectedPayment[]>([]);
   const [scanned, setScanned] = useState(false);
+  const [scanLog, setScanLog] = useState<string[]>([]);
 
-  const scanForPayments = async () => {
+  const doScan = async () => {
     if (!hasKeys || !keys) return;
     setScanning(true);
-
-    // In production:
-    // 1. Fetch all StealthPayment events from vault contract
-    // 2. For each event, try to match with viewing key
-    // 3. Return matching payments
-
-    // Demo: simulate scan
-    await new Promise(r => setTimeout(r, 2000));
-
-    // For hackathon demo — in real app this would scan on-chain events
     setPayments([]);
+    setScanLog([]);
+
+    const log = (msg: string) => setScanLog(prev => [...prev, msg]);
+
+    try {
+      log('📡 Connecting to Starknet Sepolia...');
+
+      // Fetch payment count from vault
+      log('🔍 Reading vault contract...');
+      const countResult = await PROVIDER.callContract({
+        contractAddress: VAULT_ADDRESS,
+        entrypoint: 'get_payment_count',
+      });
+      const count = Number(countResult[0]);
+      log(`📊 Found ${count} total payments on-chain`);
+
+      if (count === 0) {
+        log('📭 No payments to scan');
+        setScanning(false);
+        setScanned(true);
+        return;
+      }
+
+      // Fetch each payment and try to match
+      log(`🔑 Scanning with viewing key...`);
+      const viewingKey = BigInt(keys.viewingKey);
+      const spendingPubX = BigInt(keys.spendingPubX);
+      const spendingPubY = BigInt(keys.spendingPubY);
+
+      const paymentData: Array<{
+        ephPubX: bigint; ephPubY: bigint;
+        stealthX: bigint; stealthY: bigint;
+        token: string; amount: string;
+      }> = [];
+
+      for (let i = 0; i < count; i++) {
+        const result = await PROVIDER.callContract({
+          contractAddress: VAULT_ADDRESS,
+          entrypoint: 'get_payment',
+          calldata: [i.toString()],
+        });
+        paymentData.push({
+          ephPubX: BigInt(result[0]),
+          ephPubY: BigInt(result[1]),
+          stealthX: BigInt(result[2]), // stealth address
+          stealthY: 0n, // we store address not pubkey Y
+          token: result[3],
+          amount: result[4],
+        });
+      }
+
+      // Try matching each payment
+      const matched = scanForPayments(viewingKey, spendingPubX, spendingPubY, paymentData);
+
+      if (matched.length > 0) {
+        log(`✅ Found ${matched.length} payment(s) for you!`);
+        setPayments(matched.map(idx => ({
+          index: idx,
+          amount: (Number(BigInt(paymentData[idx].amount)) / 1e18).toFixed(6),
+          token: 'ETH',
+          stealthPubX: '0x' + paymentData[idx].stealthX.toString(16),
+          ephPubX: '0x' + paymentData[idx].ephPubX.toString(16),
+        })));
+      } else {
+        log('📭 No payments matched your viewing key');
+      }
+    } catch (err: any) {
+      log(`❌ Error: ${err.message}`);
+    }
+
     setScanning(false);
     setScanned(true);
   };
@@ -60,23 +127,27 @@ export default function Scan(_props: Props) {
         </p>
 
         <div className="key-info">
-          <span className="badge">🔑 Viewing Key Active</span>
+          <span className="badge success">🔑 Viewing Key Active</span>
           <code className="small">{keys!.viewingPubX.slice(0, 16)}...</code>
         </div>
 
-        <button
-          onClick={scanForPayments}
-          className="primary-btn"
-          disabled={scanning}
-        >
+        <button onClick={doScan} className="primary-btn" disabled={scanning}>
           {scanning ? (
             <>
-              <span className="spinner-inline" /> Scanning blocks...
+              <span className="spinner-inline" /> Scanning...
             </>
           ) : (
-            '🔍 Scan Payments'
+            '🔍 Scan Blockchain'
           )}
         </button>
+
+        {scanLog.length > 0 && (
+          <div className="scan-log">
+            {scanLog.map((msg, i) => (
+              <div key={i} className="log-entry">{msg}</div>
+            ))}
+          </div>
+        )}
 
         {payments.length > 0 && (
           <div className="payments-list">
@@ -87,7 +158,16 @@ export default function Scan(_props: Props) {
                   <span className="amount">{p.amount} {p.token}</span>
                   <code className="small">{p.stealthPubX.slice(0, 12)}...</code>
                 </div>
-                <button className="withdraw-btn">
+                <button
+                  className="withdraw-btn"
+                  onClick={() => {
+                    if (!wallet.isConnected) {
+                      connectWallet();
+                      return;
+                    }
+                    alert('Withdrawal flow coming in next update!');
+                  }}
+                >
                   💸 Withdraw
                 </button>
               </div>
@@ -95,7 +175,7 @@ export default function Scan(_props: Props) {
           </div>
         )}
 
-        {scanned && payments.length === 0 && (
+        {scanned && payments.length === 0 && !scanning && (
           <div className="empty-state">
             <p>📭 No payments found</p>
             <p className="note">Share your payment link to receive private payments!</p>
@@ -112,7 +192,7 @@ export default function Scan(_props: Props) {
           </div>
           <div className="info-item">
             <strong>🔗 On-chain Events</strong>
-            <p>We scan StealthPayment events and try each ephemeral key with your viewing key.</p>
+            <p>We read StealthPayment records from the vault contract and try each with your viewing key.</p>
           </div>
           <div className="info-item">
             <strong>💸 Withdraw Anywhere</strong>

@@ -1,6 +1,5 @@
 import { BrowserRouter, Routes, Route, Link } from 'react-router-dom';
-import { useState } from 'react';
-// Wallet connection handled inline
+import { useState, useCallback } from 'react';
 import Home from './pages/Home';
 import Pay from './pages/Pay';
 import Scan from './pages/Scan';
@@ -17,26 +16,37 @@ function App() {
     address: '',
     isConnected: false,
   });
+  const [connecting, setConnecting] = useState(false);
 
-  const connectWallet = async () => {
+  const connectWallet = useCallback(async () => {
+    setConnecting(true);
     try {
-      // Dynamic import to avoid build issues
-      const mod = await import('get-starknet-core') as any;
-      const connectFn = mod.connect || mod.default?.connect || mod.default;
-      if (!connectFn) { alert('Wallet connector not available'); return; }
-      const starknet = await connectFn({ modalMode: 'alwaysAsk' });
-      if (starknet) {
-        await starknet.enable();
-        if (starknet.selectedAddress) {
-          setWallet({
-            address: starknet.selectedAddress,
-            isConnected: true,
-          });
-        }
+      // Check if any Starknet wallet is installed
+      const win = window as any;
+      const starknetWallet = win.starknet_argentX || win.starknet_braavos || win.starknet;
+
+      if (!starknetWallet) {
+        alert('No Starknet wallet found!\n\nPlease install Argent X or Braavos:\n• Argent X: https://www.argent.xyz/argent-x/\n• Braavos: https://braavos.app/');
+        setConnecting(false);
+        return;
+      }
+
+      await starknetWallet.enable({ starknetVersion: 'v5' });
+      if (starknetWallet.selectedAddress) {
+        setWallet({
+          address: starknetWallet.selectedAddress,
+          isConnected: true,
+        });
       }
     } catch (err) {
       console.error('Wallet connection failed:', err);
+      alert('Wallet connection failed. Please try again.');
     }
+    setConnecting(false);
+  }, []);
+
+  const disconnectWallet = () => {
+    setWallet({ address: '', isConnected: false });
   };
 
   return (
@@ -50,12 +60,15 @@ function App() {
             <Link to="/scan">Scan</Link>
             <Link to="/dashboard">Dashboard</Link>
             {wallet.isConnected ? (
-              <span className="wallet-addr">
-                {wallet.address.slice(0, 6)}...{wallet.address.slice(-4)}
-              </span>
+              <div className="wallet-connected">
+                <span className="wallet-addr">
+                  {wallet.address.slice(0, 6)}...{wallet.address.slice(-4)}
+                </span>
+                <button onClick={disconnectWallet} className="disconnect-btn">✕</button>
+              </div>
             ) : (
-              <button onClick={connectWallet} className="connect-btn">
-                Connect Wallet
+              <button onClick={connectWallet} className="connect-btn" disabled={connecting}>
+                {connecting ? 'Connecting...' : 'Connect Wallet'}
               </button>
             )}
           </div>
@@ -63,10 +76,10 @@ function App() {
 
         <main>
           <Routes>
-            <Route path="/" element={<Home wallet={wallet} />} />
-            <Route path="/pay/:metaAddress" element={<Pay wallet={wallet} />} />
-            <Route path="/scan" element={<Scan wallet={wallet} />} />
-            <Route path="/dashboard" element={<Dashboard wallet={wallet} />} />
+            <Route path="/" element={<Home wallet={wallet} connectWallet={connectWallet} />} />
+            <Route path="/pay/:metaAddress" element={<Pay wallet={wallet} connectWallet={connectWallet} />} />
+            <Route path="/scan" element={<Scan wallet={wallet} connectWallet={connectWallet} />} />
+            <Route path="/dashboard" element={<Dashboard wallet={wallet} connectWallet={connectWallet} />} />
           </Routes>
         </main>
       </div>

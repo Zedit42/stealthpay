@@ -299,6 +299,54 @@ body {
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 
+/* ── Wallet ── */
+.wallet-connected { display: flex; align-items: center; gap: 0.5rem; }
+.disconnect-btn {
+  background: none; border: none; color: var(--text-dim);
+  cursor: pointer; font-size: 1rem; padding: 0.25rem;
+}
+.disconnect-btn:hover { color: var(--danger); }
+
+.connect-prompt {
+  padding: 1rem;
+  background: var(--bg);
+  border-radius: 8px;
+  margin-bottom: 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.connect-prompt p { color: var(--text-dim); }
+
+/* ── Error ── */
+.error-box {
+  margin-top: 1rem;
+  padding: 1.5rem;
+  background: var(--danger-bg);
+  border-radius: 8px;
+  border: 1px solid rgba(239,68,68,0.2);
+}
+.error-box h3 { color: var(--danger); margin-bottom: 0.5rem; }
+.error-box p { color: var(--text-dim); margin-bottom: 1rem; }
+
+/* ── TX Link ── */
+.tx-link { color: var(--accent); text-decoration: none; font-family: monospace; font-size: 0.85rem; }
+.tx-link:hover { text-decoration: underline; }
+
+/* ── Scan Log ── */
+.scan-log {
+  margin-top: 1rem;
+  padding: 1rem;
+  background: var(--bg);
+  border-radius: 8px;
+  font-family: monospace;
+  font-size: 0.8rem;
+  max-height: 200px;
+  overflow-y: auto;
+}
+.log-entry { padding: 0.25rem 0; color: var(--text-dim); }
+.log-entry:last-child { color: var(--text); }
+
 /* ── Responsive ── */
 @media (max-width: 640px) {
   .features { grid-template-columns: 1fr; }

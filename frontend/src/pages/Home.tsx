@@ -4,21 +4,20 @@ import { useStealthKeys } from '../hooks/useStealthKeys';
 
 interface Props {
   wallet: WalletState;
+  connectWallet: () => Promise<void>;
 }
 
-export default function Home(_props: Props) {
+export default function Home({ wallet: _wallet, connectWallet: _cw }: Props) {
   const { keys, generate, hasKeys } = useStealthKeys();
   const [paymentLink, setPaymentLink] = useState('');
   const [copied, setCopied] = useState(false);
 
   const handleSetup = () => {
     const newKeys = generate();
-    // Payment link encodes the meta-address (spending + viewing public keys)
     const metaAddr = [
       newKeys.spendingPubX, newKeys.spendingPubY,
       newKeys.viewingPubX, newKeys.viewingPubY,
     ].join(',');
-    // URL-safe base64: replace +/= chars that break routing
     const encoded = btoa(metaAddr).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
     setPaymentLink(`${window.location.origin}/pay/${encoded}`);
   };

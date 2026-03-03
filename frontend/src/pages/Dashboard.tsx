@@ -4,9 +4,10 @@ import { useStealthKeys } from '../hooks/useStealthKeys';
 
 interface Props {
   wallet: WalletState;
+  connectWallet: () => Promise<void>;
 }
 
-export default function Dashboard(_props: Props) {
+export default function Dashboard({ wallet, connectWallet }: Props) {
   const { keys, hasKeys, generate, clear } = useStealthKeys();
   const [showKeys, setShowKeys] = useState(false);
   const [copied, setCopied] = useState('');
@@ -40,18 +41,28 @@ export default function Dashboard(_props: Props) {
     <div className="page">
       <div className="card">
         <h2>🥷 Your Dashboard</h2>
+
+        {!wallet.isConnected && (
+          <div className="connect-prompt">
+            <p>Connect your wallet to interact with the blockchain.</p>
+            <button onClick={connectWallet} className="secondary-btn">
+              🔗 Connect Wallet
+            </button>
+          </div>
+        )}
+
         <div className="stats">
           <div className="stat">
             <span className="stat-value">✅</span>
             <span className="stat-label">Keys Active</span>
           </div>
           <div className="stat">
-            <span className="stat-value">0</span>
-            <span className="stat-label">Payments Received</span>
+            <span className="stat-value">{wallet.isConnected ? '🟢' : '🔴'}</span>
+            <span className="stat-label">Wallet {wallet.isConnected ? 'Connected' : 'Not Connected'}</span>
           </div>
           <div className="stat">
-            <span className="stat-value">0</span>
-            <span className="stat-label">Withdrawn</span>
+            <span className="stat-value">Sepolia</span>
+            <span className="stat-label">Network</span>
           </div>
         </div>
       </div>
@@ -60,7 +71,7 @@ export default function Dashboard(_props: Props) {
         <h2>📎 Your Payment Link</h2>
         <p className="note">Share this link to receive private payments.</p>
         <div className="link-box">
-          <code>{paymentLink.slice(0, 60)}...</code>
+          <code>{paymentLink.length > 80 ? paymentLink.slice(0, 80) + '...' : paymentLink}</code>
           <button
             onClick={() => copyToClipboard(paymentLink, 'link')}
             className="copy-btn"
@@ -118,7 +129,7 @@ export default function Dashboard(_props: Props) {
           <button onClick={generate} className="secondary-btn">
             🔄 Regenerate Keys
           </button>
-          <button onClick={clear} className="danger-btn">
+          <button onClick={() => { if (confirm('Delete all keys? You will lose access to any received payments.')) clear(); }} className="danger-btn">
             🗑️ Delete Keys
           </button>
         </div>
